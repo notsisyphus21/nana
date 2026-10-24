@@ -1,6 +1,6 @@
 # ForzaClone: Horizon Circuit
 
-A browser-based 3D racing game built with Three.js. Drive a procedural circuit, race against AI drivers, drift for skill points, use NOS, and rewind the last few seconds of the race.
+A browser-based 3D racing game built with Three.js. Drive a procedural circuit, race against AI drivers, drift for skill points, use NOS and Blur-style power-ups, and rewind the last few seconds of the race.
 
 The start menu includes a world tour of eleven circuits — Horizon, Monaco, Monza,
 Silverstone, Spa, Suzuka, Bahrain, Imola, Zandvoort, COTA, and Interlagos — six
@@ -32,6 +32,7 @@ You can also use any static web server, such as the VS Code Live Server extensio
 | `D` / `Arrow Right` | Steer right |
 | `Space` | Drift / handbrake |
 | `Shift` | NOS boost |
+| `E` | Use held power-up |
 | `R` | Rewind |
 | `Esc` / `P` | Pause |
 | `C` | Toggle commentary |
@@ -57,12 +58,21 @@ misses, wall contact, big drifts, fastest laps, boost use, DRS, weather changes,
 and the finish. Trade paint with AI, bank drift points, and use the NOS/ERS boost
 to climb the order.
 
+Glowing power-up pads are placed around every circuit and respawn after a short
+delay. Drive through one to fill the item slot, then press `E` to fire it. The
+seven pickups are NITRO (instant boost and full NOS), SHUNT (homing missile that
+slows the car ahead), BOLT (three forward projectiles), MINE (drops behind to
+catch a pursuer), SHIELD (blocks incoming shunts for 6.5 seconds), SHOCK (slows
+every rival ahead), and REPAIR (clears a hit, refills NOS, and grants a short
+shield). Rival drivers can fire shunts back at you, so keep a shield ready or use
+repair to recover.
+
 ## Technology
 
 - HTML, CSS, and JavaScript
 - Three.js `0.160.0`
 - WebGL post-processing with bloom
-- Procedural track, terrain, scenery, open-wheel and GT vehicles, weather, and HUD
+- Procedural track, terrain, scenery, open-wheel and GT vehicles, weather, HUD, and arcade power-ups
 
 ## Notes
 

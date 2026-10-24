@@ -390,6 +390,36 @@
   }
   .weatherbtn { width: auto; min-width: 46px; padding: 0 11px; font-size: 11px; letter-spacing: 1.5px; }
   #weathername { color: #9fe8ff; font-weight: 700; }
+  /* ---- power-up slot + hit flash ---- */
+  #itembox {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 13px; padding: 9px 18px 9px 10px;
+    border-radius: 13px; border: 1px solid var(--item-color, rgba(120,200,255,.3));
+    background: linear-gradient(160deg, rgba(10,16,28,.9), rgba(6,10,18,.7));
+    box-shadow: 0 0 26px rgba(0,180,255,.14), inset 0 0 26px rgba(0,80,160,.12);
+    transition: opacity .2s, border-color .2s, box-shadow .2s;
+  }
+  #itembox.empty { opacity: .62; }
+  #itemicon {
+    width: 40px; height: 40px; border-radius: 10px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900; letter-spacing: 0;
+    color: var(--item-color, #6d90aa); border: 1px solid var(--item-color, rgba(120,200,255,.3));
+    background: rgba(255,255,255,.05);
+    text-shadow: 0 0 14px var(--item-color, transparent);
+  }
+  #itemname { display: block; font-size: 15px; font-weight: 800; letter-spacing: 2.5px; line-height: 1.1; }
+  #itemsub { display: block; margin-top: 3px; font-size: 8.5px; letter-spacing: 2px; color: #7fa6c4; }
+  #itemkey {
+    font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 4px 7px;
+    border-radius: 6px; border: 1px solid rgba(120,200,255,.3); color: #bfe6ff;
+  }
+  #hitfx {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 34%, rgba(255,36,36,.48) 100%);
+    transition: opacity .12s ease;
+  }
+  #hitfx.on { opacity: 1; }
 </style>
 </head>
 <body>
@@ -397,7 +427,7 @@
 <div id="hud" class="hidden">
   <div id="vignette"></div>
   <button id="pausebtn" title="Pause (Esc)">II</button>
-  <div id="help"><b>W/S</b> drive · <b>A/D</b> steer · <b>SPACE</b> drift · <b>SHIFT</b> NOS · <b>R</b> rewind · <b>ESC</b> pause · <b>C</b> commentary</div>
+  <div id="help"><b>W/S</b> drive · <b>A/D</b> steer · <b>SPACE</b> drift · <b>SHIFT</b> NOS · <b>E</b> item · <b>R</b> rewind · <b>ESC</b> pause · <b>C</b> commentary</div>
   <div id="commentary"><b>COMMENTARY</b><span id="commentarytext"></span></div>
   <div id="race">
     <div id="pos">--<small>/6</small></div>
@@ -420,6 +450,12 @@
     <div id="skilltotal">0<br><small>SKILL</small></div>
     <div id="skillpend"></div>
   </div>
+  <div id="itembox" class="empty">
+    <div id="itemicon">?</div>
+    <div><b id="itemname">NO ITEM</b><small id="itemsub">DRIVE OVER A PAD</small></div>
+    <div id="itemkey">E</div>
+  </div>
+  <div id="hitfx"></div>
   <div id="popups"></div>
   <div id="drift">DRIFT</div>
   <div id="mapframe"><span id="maplabel">MAP</span></div>
@@ -455,7 +491,7 @@
       </div>
       <button id="startbtn" class="btn primary">START RACE</button>
     </div>
-    <div class="hint"><b>W/S</b> drive · <b>A/D</b> steer · <b>SPACE</b> drift · <b>SHIFT</b> NOS · <b>R</b> rewind · <b>ESC</b> pause · <b>C</b> commentary</div>
+    <div class="hint"><b>W/S</b> drive · <b>A/D</b> steer · <b>SPACE</b> drift · <b>SHIFT</b> NOS · <b>E</b> item · <b>R</b> rewind · <b>ESC</b> pause · <b>C</b> commentary</div>
   </div>
 </div>
 
@@ -1630,16 +1666,17 @@ function setPlayerCar(index) {
 
 /* ---- AI drivatars ---- */
 const AI_DEFS = [
-  { paint: 0x1257c9, glow: 0xffb02e, offset:  2.6, skill: 1.00, s0: 0.011 },
-  { paint: 0xe8a812, glow: 0xff2ec4, offset: -2.6, skill: 0.99, s0: 0.018 },
-  { paint: 0x30b04a, glow: 0x7cff4f, offset:  4.6, skill: 1.01, s0: 0.025 },
-  { paint: 0x8a2be2, glow: 0x00e5ff, offset: -4.6, skill: 0.98, s0: 0.032 },
-  { paint: 0xe8ecef, glow: 0xff7a00, offset:  0.0, skill: 1.02, s0: 0.039 }
+  { name: 'VEX', paint: 0x1257c9, glow: 0xffb02e, offset:  2.6, skill: 1.00, s0: 0.011 },
+  { name: 'ROOK', paint: 0xe8a812, glow: 0xff2ec4, offset: -2.6, skill: 0.99, s0: 0.018 },
+  { name: 'NOVA', paint: 0x30b04a, glow: 0x7cff4f, offset:  4.6, skill: 1.01, s0: 0.025 },
+  { name: 'HEX', paint: 0x8a2be2, glow: 0x00e5ff, offset: -4.6, skill: 0.98, s0: 0.032 },
+  { name: 'JAX', paint: 0xe8ecef, glow: 0xff7a00, offset:  0.0, skill: 1.02, s0: 0.039 }
 ];
 const ais = AI_DEFS.map(def => {
   const c = buildCar(def.paint, def.glow);
   scene.add(c.group);
-  return { ...def, car: c, s: def.s0, v: 0, lap: 0, missCooldown: 0 };
+  return { ...def, car: c, s: def.s0, v: 0, lap: 0, missCooldown: 0,
+    slowTimer: 0, hitTimer: 0, attackTimer: 14 + Math.random() * 18 };
 });
 
 /* ---- minimap markers ---- */
@@ -1744,6 +1781,10 @@ addEventListener('keydown', e => {
     e.preventDefault();
     toggleCommentary();
   }
+  if (e.code === 'KeyE') {
+    e.preventDefault();
+    useItem();
+  }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -1756,6 +1797,7 @@ const state = {
   heading: Math.atan2(tans[startIdx].x, tans[startIdx].z),
   vel: new THREE.Vector3(),
   nos: 100, boosting: false, drifting: false, drs: false,
+  item: null, itemBoost: 0, shieldTimer: 0, hitSpin: 0,
   nearestIdx: startIdx, prog: startIdx / N, lap: 1,
   gates: [false, false, false]
 };
@@ -1799,7 +1841,8 @@ function stepPhysics(dt, controlsLive) {
   const target = (left ? 1 : 0) + (right ? -1 : 0);
   steer += (target - steer) * Math.min(1, dt * 8);
 
-  state.boosting = wantNos && state.nos > 0.5 && throttle && vF > 1;
+  const itemDrive = controlsLive && state.itemBoost > 0;
+  state.boosting = (wantNos && throttle || itemDrive) && state.nos > 0.5 && vF > 1;
   if (state.boosting) state.nos = Math.max(0, state.nos - 26 * dt);
   else                state.nos = Math.min(100, state.nos + 14 * dt);
   if (state.drifting) state.nos = Math.min(100, state.nos + 17 * dt);
@@ -1809,7 +1852,7 @@ function stepPhysics(dt, controlsLive) {
     Math.abs(steer) < 0.35 &&
     (VENUES[activeVenue].drs || []).some(([a, b]) => progNow >= a && progNow <= b);
 
-  if (throttle) {
+  if (throttle || itemDrive) {
     const power = TUNE.engine * (state.boosting ? TUNE.nosMult : 1);
     const cap = TUNE.maxSpeed * (state.boosting ? 1.18 : (state.drs ? 1.09 : 0.9));
     if (vF < cap) {
@@ -1900,6 +1943,9 @@ function updateAI(ai, dt, live) {
     // rubber-band around the player
     const diff = playerTotalProg() - ((ai.lap) + ai.s);
     vTarget *= THREE.MathUtils.clamp(1 + diff * 1.5, 0.9, 1.14);
+    ai.slowTimer = Math.max(0, ai.slowTimer - dt);
+    ai.hitTimer = Math.max(0, ai.hitTimer - dt);
+    if (ai.slowTimer > 0) vTarget *= 0.42;
     const accel = (vTarget > ai.v) ? 32 : 48;
     ai.v += Math.sign(vTarget - ai.v) * Math.min(Math.abs(vTarget - ai.v), accel * dt);
     const prevS = ai.s;
@@ -1920,6 +1966,9 @@ function updateAI(ai, dt, live) {
     tans[i0].z + (tans[i1].z - tans[i0].z) * t
   );
   ai.car.group.rotation.y = heading;
+  ai.car.group.rotation.z = ai.hitTimer > 0
+    ? Math.sin(ai.hitTimer * 28) * 0.5 * Math.min(1, ai.hitTimer * 2)
+    : 0;
   const spin = ai.v * dt / WHEEL_R;
   for (const sp of ai.car.spinners) sp.rotation.x += spin;
   ai.heading = heading;
@@ -2235,7 +2284,413 @@ function updateHUD(vF, lapTimeMs, bestMs, lastMs) {
   elLapTime.textContent = fmtTime(lapTimeMs);
   elBestTime.textContent = fmtTime(bestMs);
   elLastTime.textContent = fmtTime(lastMs);
+  updateItemHUD();
 }
+
+const ITEMS = {
+  nitro:  { name: 'NITRO',  icon: 'N', css: '#29e6ff' },
+  shunt:  { name: 'SHUNT',  icon: 'S', css: '#ff4a35' },
+  bolt:   { name: 'BOLT',   icon: 'B', css: '#8fe9ff' },
+  mine:   { name: 'MINE',   icon: 'M', css: '#ff8a1f' },
+  shield: { name: 'SHIELD', icon: 'D', css: '#58b8ff' },
+  shock:  { name: 'SHOCK',  icon: 'K', css: '#bd74ff' },
+  repair: { name: 'REPAIR', icon: '+', css: '#5cff9d' }
+};
+const ITEM_POOL = [
+  ['nitro', 20], ['shunt', 18], ['bolt', 18], ['mine', 14],
+  ['shield', 12], ['shock', 10], ['repair', 8]
+];
+
+const elItemBox = document.getElementById('itembox');
+const elItemIcon = document.getElementById('itemicon');
+const elItemName = document.getElementById('itemname');
+const elItemSub = document.getElementById('itemsub');
+const elHitFx = document.getElementById('hitfx');
+
+const pickupGroup = new THREE.Group();
+scene.add(pickupGroup);
+const pickups = [];
+const pickupAssets = {
+  ringGeo: new THREE.TorusGeometry(1.35, 0.12, 8, 24),
+  coreGeo: new THREE.OctahedronGeometry(0.64, 0),
+  beamGeo: new THREE.CylinderGeometry(0.1, 0.1, 3.4, 8),
+  discGeo: new THREE.RingGeometry(1.15, 1.85, 28),
+  ringMat: new THREE.MeshStandardMaterial({
+    color: 0x0a2b38, emissive: 0x25e8ff, emissiveIntensity: 2.2, metalness: 0.4, roughness: 0.3
+  }),
+  coreMat: new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0xb8fbff, emissiveIntensity: 2.8, roughness: 0.2
+  }),
+  beamMat: new THREE.MeshBasicMaterial({
+    color: 0x39dfff, transparent: true, opacity: 0.11, depthWrite: false, side: THREE.DoubleSide
+  }),
+  discMat: new THREE.MeshBasicMaterial({
+    color: 0x25e8ff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false
+  })
+};
+
+const projectiles = [];
+const mines = [];
+const projGeo = new THREE.SphereGeometry(0.34, 10, 8);
+const mineGeo = new THREE.IcosahedronGeometry(0.58, 0);
+const boltMat = new THREE.MeshStandardMaterial({
+  color: 0x05222c, emissive: 0x9ff4ff, emissiveIntensity: 5, roughness: 0.2
+});
+const shuntMat = new THREE.MeshStandardMaterial({
+  color: 0x2a0805, emissive: 0xff4a24, emissiveIntensity: 5, roughness: 0.25
+});
+const aiShuntMat = new THREE.MeshStandardMaterial({
+  color: 0x2a0530, emissive: 0xff49e0, emissiveIntensity: 5, roughness: 0.25
+});
+const mineMat = new THREE.MeshStandardMaterial({
+  color: 0x1a0c04, emissive: 0xff7a1f, emissiveIntensity: 3.6, metalness: 0.7, roughness: 0.35
+});
+const shieldMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(2.25, 18, 12),
+  new THREE.MeshBasicMaterial({
+    color: 0x58c8ff, transparent: true, opacity: 0.16, wireframe: true, depthWrite: false
+  })
+);
+shieldMesh.visible = false;
+shieldMesh.renderOrder = 3;
+scene.add(shieldMesh);
+
+let hitFxTimer = 0;
+let powerCommentAt = 0;
+
+function powerComment(text, cd = 9000) {
+  const now = performance.now();
+  if (now - powerCommentAt < cd) return;
+  powerCommentAt = now;
+  commentary(text);
+}
+
+function rollItem() {
+  let r = Math.random() * 100;
+  for (const [key, weight] of ITEM_POOL) {
+    r -= weight;
+    if (r <= 0) return key;
+  }
+  return 'nitro';
+}
+
+function updateItemHUD() {
+  const def = state.item ? ITEMS[state.item] : null;
+  elItemBox.classList.toggle('empty', !def);
+  elItemBox.style.setProperty('--item-color', def ? def.css : 'rgba(120,200,255,.3)');
+  elItemIcon.textContent = def ? def.icon : '?';
+  elItemName.textContent = def ? def.name : 'NO ITEM';
+  if (state.shieldTimer > 0) elItemSub.textContent = `SHIELD ${state.shieldTimer.toFixed(1)}S`;
+  else elItemSub.textContent = def ? 'PRESS E TO USE' : 'DRIVE OVER A PAD';
+}
+
+function buildPickups() {
+  while (pickupGroup.children.length) pickupGroup.remove(pickupGroup.children[0]);
+  pickups.length = 0;
+  const COUNT = 12;
+  for (let i = 0; i < COUNT; i++) {
+    const s = (i + 0.5) / COUNT;
+    const idx = Math.floor(s * N) % N;
+    const lat = (i % 3 - 1) * HALF_W * 0.36;
+    const base = pts[idx].clone().addScaledVector(sides[idx], lat);
+    const y = groundH(base.x, base.z);
+    const g = new THREE.Group();
+    g.position.set(base.x, y, base.z);
+    const beam = new THREE.Mesh(pickupAssets.beamGeo, pickupAssets.beamMat);
+    beam.position.y = 1.7;
+    const disc = new THREE.Mesh(pickupAssets.discGeo, pickupAssets.discMat);
+    disc.rotation.x = -Math.PI / 2;
+    disc.position.y = 0.06;
+    const ring = new THREE.Mesh(pickupAssets.ringGeo, pickupAssets.ringMat);
+    ring.position.y = 1.15;
+    const core = new THREE.Mesh(pickupAssets.coreGeo, pickupAssets.coreMat);
+    core.position.y = 1.15;
+    g.add(beam, disc, ring, core);
+    pickupGroup.add(g);
+    pickups.push({
+      group: g, ring, core, baseY: y, seed: Math.random() * 10,
+      available: true, respawn: 0
+    });
+  }
+  updateItemHUD();
+}
+
+function resetPickups() {
+  for (const p of pickups) {
+    p.available = true;
+    p.respawn = 0;
+    p.group.visible = true;
+  }
+}
+
+function collectItem() {
+  if (state.item) return;
+  state.item = rollItem();
+  updateItemHUD();
+  popup(`PICKED UP ${ITEMS[state.item].name}`, 'good');
+}
+
+function updatePickups(dt, canCollect) {
+  const t = performance.now() * 0.001;
+  for (const p of pickups) {
+    if (!p.available) {
+      p.respawn -= dt;
+      if (p.respawn <= 0) {
+        p.available = true;
+        p.group.visible = true;
+      }
+      continue;
+    }
+    p.group.rotation.y += dt * 1.4;
+    const bob = Math.sin(t * 2.2 + p.seed) * 0.18;
+    p.ring.position.y = 1.15 + bob;
+    p.core.position.y = 1.15 + bob;
+    p.core.rotation.x += dt * 1.8;
+    p.core.rotation.z += dt * 2.4;
+    if (!canCollect || state.item) continue;
+    const dx = state.pos.x - p.group.position.x;
+    const dz = state.pos.z - p.group.position.z;
+    if (dx * dx + dz * dz < 2.7 * 2.7) {
+      p.available = false;
+      p.group.visible = false;
+      p.respawn = 7.5;
+      collectItem();
+    }
+  }
+}
+
+function nearestAiAhead() {
+  const mine = playerTotalProg();
+  let best = null, bestGap = 1;
+  for (const ai of ais) {
+    const gap = (ai.lap + ai.s) - mine;
+    if (gap > -0.01 && gap < bestGap) {
+      bestGap = gap;
+      best = ai;
+    }
+  }
+  if (!best) {
+    let nearest = Infinity;
+    for (const ai of ais) {
+      const gap = Math.abs((ai.lap + ai.s) - mine);
+      if (gap < nearest) {
+        nearest = gap;
+        best = ai;
+      }
+    }
+  }
+  return best;
+}
+
+function spawnProjectile(kind, origin, dir) {
+  const bolt = kind === 'bolt';
+  const mesh = new THREE.Mesh(projGeo, bolt ? boltMat : kind === 'aiShunt' ? aiShuntMat : shuntMat);
+  mesh.scale.setScalar(bolt ? 0.72 : 1.15);
+  mesh.position.copy(origin);
+  if (dir) mesh.position.addScaledVector(dir, 2.2);
+  mesh.position.y += 0.9;
+  scene.add(mesh);
+  projectiles.push({
+    kind, mesh,
+    target: kind === 'shunt' ? nearestAiAhead() : null,
+    life: bolt ? 1.25 : 4.6,
+    vel: (dir ? dir.clone() : new THREE.Vector3(0, 0, 1)).multiplyScalar(bolt ? 95 : 58)
+  });
+}
+
+function hitAI(ai, label) {
+  if (!ai) return;
+  ai.slowTimer = Math.max(ai.slowTimer, 2.8);
+  ai.hitTimer = Math.max(ai.hitTimer, 1.1);
+  ai.v = Math.max(0, ai.v * 0.45);
+  skill.pending += 110;
+  skill.bankTimer = 0;
+  popup(`${label} HIT +110`, 'good');
+  const p = ai.car.group.position.clone();
+  p.y += 0.7;
+  for (let k = 0; k < 9; k++) {
+    spawnSmoke(p,
+      new THREE.Vector3((Math.random() - .5) * 8, 2 + Math.random() * 3, (Math.random() - .5) * 8),
+      0.6 + Math.random() * 0.4, 0.45 + Math.random() * 0.35,
+      label === 'BOLT' ? 0x8feaff : 0xff8a5c);
+  }
+  powerComment(`${ai.name || 'A rival'} takes a ${label.toLowerCase()}! ${driverName} is on the attack!`);
+}
+
+function hitPlayer() {
+  if (raceOver || rewinding) return;
+  if (state.shieldTimer > 0) {
+    popup('SHIELD BLOCKED IT', 'good');
+    powerComment(`The shield saves ${driverName}!`, 5000);
+    return;
+  }
+  state.hitSpin = 1.5;
+  state.vel.multiplyScalar(0.45);
+  state.nos = Math.max(0, state.nos - 22);
+  skill.pending = 0;
+  elHitFx.classList.add('on');
+  clearTimeout(hitFxTimer);
+  hitFxTimer = setTimeout(() => elHitFx.classList.remove('on'), 450);
+  popup('SHUNT HIT!', 'bad');
+  powerComment(`A shunt finds ${driverName}! That will hurt the run.`, 7000);
+}
+
+function updateProjectiles(dt) {
+  if (dt <= 0) return;
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const pr = projectiles[i];
+    pr.life -= dt;
+    if ((pr.kind === 'shunt' && pr.target) || pr.kind === 'aiShunt') {
+      const aim = pr.kind === 'shunt'
+        ? pr.target.car.group.position.clone()
+        : state.pos.clone();
+      aim.y += 1.0;
+      const dir = aim.sub(pr.mesh.position);
+      if (dir.lengthSq() > 0.0001) {
+        const speed = pr.kind === 'aiShunt' ? 54 : 76;
+        pr.vel.lerp(dir.normalize().multiplyScalar(speed), Math.min(1, dt * 5.0));
+      }
+    }
+    pr.mesh.position.addScaledVector(pr.vel, dt);
+    pr.mesh.rotation.x += dt * 8;
+    pr.mesh.rotation.y += dt * 11;
+    let hit = false;
+    if (pr.kind === 'aiShunt') {
+      if (state.pos.distanceTo(pr.mesh.position) < 3.2) {
+        hitPlayer();
+        hit = true;
+      }
+    } else {
+      for (const ai of ais) {
+        if (ai.car.group.position.distanceTo(pr.mesh.position) < 3.2) {
+          hitAI(ai, pr.kind === 'bolt' ? 'BOLT' : 'SHUNT');
+          hit = true;
+          break;
+        }
+      }
+    }
+    if (hit || pr.life <= 0) {
+      scene.remove(pr.mesh);
+      projectiles.splice(i, 1);
+    }
+  }
+}
+
+function dropMine() {
+  const fwd = new THREE.Vector3(Math.sin(state.heading), 0, Math.cos(state.heading));
+  const p = state.pos.clone().addScaledVector(fwd, -3.6);
+  p.y = groundH(p.x, p.z) + 0.5;
+  const mesh = new THREE.Mesh(mineGeo, mineMat);
+  mesh.position.copy(p);
+  scene.add(mesh);
+  mines.push({ mesh, life: 20 });
+  powerComment(`${driverName} leaves a little present behind!`, 8000);
+}
+
+function updateMines(dt) {
+  if (dt <= 0) return;
+  for (let i = mines.length - 1; i >= 0; i--) {
+    const m = mines[i];
+    m.life -= dt;
+    m.mesh.rotation.y += dt * 3;
+    m.mesh.rotation.x += dt * 0.8;
+    m.mesh.scale.setScalar(1 + Math.sin(performance.now() * 0.008 + i) * 0.12);
+    let hit = false;
+    for (const ai of ais) {
+      const dx = ai.car.group.position.x - m.mesh.position.x;
+      const dz = ai.car.group.position.z - m.mesh.position.z;
+      if (dx * dx + dz * dz < 2.8 * 2.8) {
+        hitAI(ai, 'MINE');
+        hit = true;
+        break;
+      }
+    }
+    if (hit || m.life <= 0) {
+      scene.remove(m.mesh);
+      mines.splice(i, 1);
+    }
+  }
+}
+
+function useItem() {
+  if (!state.item || paused || menuOpen || raceOver || raceClock <= 0 || rewinding) return;
+  const key = state.item;
+  state.item = null;
+  if (key === 'nitro') {
+    state.nos = 100;
+    state.itemBoost = 1.8;
+    popup('NITRO!', 'good');
+    powerComment(`${driverName} hits the nitro!`, 6000);
+  } else if (key === 'shunt') {
+    const fwd = new THREE.Vector3(Math.sin(state.heading), 0, Math.cos(state.heading));
+    spawnProjectile('shunt', state.pos, fwd);
+    popup('SHUNT AWAY', 'good');
+  } else if (key === 'bolt') {
+    const base = state.heading;
+    for (const off of [-0.14, 0, 0.14]) {
+      const d = new THREE.Vector3(Math.sin(base + off), 0, Math.cos(base + off));
+      spawnProjectile('bolt', state.pos, d);
+    }
+    popup('BOLT BARRAGE', 'good');
+  } else if (key === 'mine') {
+    dropMine();
+    popup('MINE DEPLOYED', 'good');
+  } else if (key === 'shield') {
+    state.shieldTimer = Math.max(state.shieldTimer, 6.5);
+    popup('SHIELD UP', 'good');
+    powerComment(`${driverName} raises the shield!`, 7000);
+  } else if (key === 'shock') {
+    let n = 0;
+    const mine = playerTotalProg();
+    for (const ai of ais) {
+      if ((ai.lap + ai.s) <= mine) continue;
+      ai.slowTimer = Math.max(ai.slowTimer, 3.6);
+      ai.hitTimer = Math.max(ai.hitTimer, 0.9);
+      ai.v *= 0.55;
+      n++;
+      const p = ai.car.group.position.clone();
+      p.y += 0.8;
+      for (let k = 0; k < 4; k++) {
+        spawnSmoke(p,
+          new THREE.Vector3((Math.random() - .5) * 6, 2 + Math.random() * 3, (Math.random() - .5) * 6),
+          0.6, 0.4, 0xbd74ff);
+      }
+    }
+    skill.pending += n * 75;
+    skill.bankTimer = 0;
+    popup(n ? `SHOCKWAVE — ${n} HIT` : 'SHOCKWAVE — CLEAR', 'good');
+    powerComment(`Shockwave from ${driverName}! The pack slows!`, 7000);
+  } else if (key === 'repair') {
+    state.hitSpin = 0;
+    state.nos = 100;
+    state.shieldTimer = Math.max(state.shieldTimer, 2.5);
+    popup('REPAIRED + SHIELD', 'good');
+  }
+  updateItemHUD();
+}
+
+function updatePowerupVisuals(dt) {
+  const on = state.shieldTimer > 0;
+  shieldMesh.visible = on;
+  if (on) {
+    shieldMesh.position.copy(state.pos);
+    shieldMesh.position.y += 1.0;
+    shieldMesh.rotation.y += dt * 1.2;
+    shieldMesh.rotation.x += dt * 0.4;
+    shieldMesh.scale.setScalar(1 + Math.sin(performance.now() * 0.008) * 0.06);
+    shieldMesh.material.opacity = 0.13 + 0.05 * Math.sin(performance.now() * 0.012);
+  }
+}
+
+function clearBattlefield() {
+  for (const pr of projectiles) scene.remove(pr.mesh);
+  projectiles.length = 0;
+  for (const m of mines) scene.remove(m.mesh);
+  mines.length = 0;
+}
+
+buildPickups();
+updateItemHUD();
 
 /* ================================================================== *
  *  MINIMAP
@@ -2422,9 +2877,13 @@ function resetRace() {
   state.heading = Math.atan2(tans[startIdx].x, tans[startIdx].z);
   state.vel.set(0, 0, 0);
   state.nos = 100; state.boosting = false; state.drifting = false; state.drs = false;
+  state.item = null; state.itemBoost = 0; state.shieldTimer = 0; state.hitSpin = 0;
   state.nearestIdx = startIdx; state.prog = startIdx / N;
   state.lap = 1; state.gates = [false, false, false];
-  ais.forEach((a, i) => { a.s = AI_DEFS[i].s0; a.v = 0; a.lap = 0; a.missCooldown = 0; });
+  ais.forEach((a, i) => {
+    a.s = AI_DEFS[i].s0; a.v = 0; a.lap = 0; a.missCooldown = 0;
+    a.slowTimer = 0; a.hitTimer = 0; a.attackTimer = 14 + Math.random() * 18;
+  });
   history.length = 0;
   skill.total = 0; skill.pending = 0; skill.bankTimer = 0; skill.wallCooldown = 0;
   raceClock = -COUNTDOWN; lapStart = 0;
@@ -2438,6 +2897,12 @@ function resetRace() {
   elPopups.innerHTML = '';
   elRewind.classList.remove('on');
   elResults.classList.add('hidden');
+  clearBattlefield();
+  resetPickups();
+  updateItemHUD();
+  shieldMesh.visible = false;
+  clearTimeout(hitFxTimer);
+  elHitFx.classList.remove('on');
   commentaryStarted = false; announcedFinalLap = false;
   lastPlace = null; wasBoosting = false; wasDrs = false;
   elDrsBadge.classList.remove('open');
@@ -2499,6 +2964,7 @@ function startRace() {
   if (activeVenue !== selectedVenue) {
     buildTrack(VENUES[selectedVenue]);
     updateMinimap();
+    buildPickups();
   }
   totalLaps = selectedLaps;
   weatherAuto = selectedWeather < 0;
@@ -2585,6 +3051,12 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
+  if (!paused && !rewinding) {
+    state.itemBoost = Math.max(0, state.itemBoost - dt);
+    state.shieldTimer = Math.max(0, state.shieldTimer - dt);
+    state.hitSpin = Math.max(0, state.hitSpin - dt);
+  }
+
   /* ---------- rewind branch ---------- */
   const wantRewind = !paused && keys.KeyR && raceClock > 0;
   if (wantRewind && history.length > 5) {
@@ -2649,6 +3121,19 @@ function animate() {
     /* AI + interactions */
     for (const ai of ais) {
       const p = updateAI(ai, dt, live);
+      if (live && !raceOver && raceClock > 3) {
+        ai.attackTimer -= dt;
+        if (ai.attackTimer <= 0) {
+          ai.attackTimer = 18 + Math.random() * 22;
+          const gap = playerTotalProg() - (ai.lap + ai.s);
+          if (gap > -0.005 && gap < 0.075) {
+            const from = ai.car.group.position.clone();
+            const dir = state.pos.clone().sub(from);
+            dir.y = 0;
+            if (dir.lengthSq() > 0.01) spawnProjectile('aiShunt', from, dir.normalize());
+          }
+        }
+      }
       const dx = p.x - state.pos.x, dz = p.z - state.pos.z;
       const dist = Math.hypot(dx, dz);
       if (dist < 2.4) {
@@ -2686,6 +3171,12 @@ function animate() {
     for (const ai of ais) updateAI(ai, 0, false);
   }
 
+  const battleDt = (paused || rewinding) ? 0 : dt;
+  updatePickups(dt, !paused && !raceOver && raceClock > 0);
+  updateProjectiles(battleDt);
+  updateMines(battleDt);
+  updatePowerupVisuals(battleDt);
+
   /* ---------- visuals ---------- */
   player.group.position.copy(state.pos);
   player.group.rotation.y = state.heading;
@@ -2693,7 +3184,10 @@ function animate() {
   const hA = groundH(state.pos.x + fwd.x * 2, state.pos.z + fwd.z * 2);
   const hB = groundH(state.pos.x - fwd.x * 2, state.pos.z - fwd.z * 2);
   player.group.rotation.x = -Math.atan2(hA - hB, 4);
-  player.group.rotation.z = THREE.MathUtils.clamp(-steer * vF * 0.0022, -0.06, 0.06);
+  const hitWobble = state.hitSpin > 0
+    ? Math.sin(state.hitSpin * 32) * 0.5 * Math.min(1, state.hitSpin)
+    : 0;
+  player.group.rotation.z = THREE.MathUtils.clamp(-steer * vF * 0.0022, -0.06, 0.06) + hitWobble;
   player.tailM.emissiveIntensity = braking ? 6.0 : 2.2;
   if (player.wing) {
     const wingTarget = state.drs ? -0.5 : 0;
